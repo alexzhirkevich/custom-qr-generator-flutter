@@ -1,12 +1,18 @@
 
 import 'package:custom_qr_generator/shapes/shape.dart';
 
-abstract class QrBallShape extends Shape {
-
-  @override
-  bool get dependOnNeighbors => false;
+abstract class QrBallShape extends QrElementShape {
 
   const QrBallShape();
+
+  static const basic = QrBallShapeDefault();
+
+  static QrBallShapeCircle circle({double radiusFraction = 1}) =>
+      QrBallShapeCircle(radiusFraction: radiusFraction);
+
+  static QrBallShapeRoundCorners roundCorners({
+    required double cornerFraction
+  }) => QrBallShapeRoundCorners(cornerFraction: cornerFraction);
 }
 
 class QrBallShapeDefault extends QrBallShape with ShapeRect {

@@ -1,11 +1,14 @@
 
+import 'dart:convert';
 import 'dart:math';
 
+import 'package:custom_qr_generator/custom_qr_generator.dart';
 import 'package:custom_qr_generator/util.dart';
 import 'package:custom_qr_generator/colors/color.dart';
 import 'package:custom_qr_generator/options/options.dart';
 import 'package:flutter/widgets.dart';
 import 'package:zxing_lib/qrcode.dart';
+import 'package:zxing_lib/zxing.dart';
 
 class QrPainter extends CustomPainter {
 
@@ -15,13 +18,21 @@ class QrPainter extends CustomPainter {
 
   QrPainter({
     required this.data,
-    required this.options
+    required this.options,
   }) {
+
     matrix = Encoder
-        .encode(
-        data, options.ecl, Map.fromEntries([
-    ]))
+        .encode(data, options.ecl)
         .matrix!;
+
+    var width = matrix.width~/4;
+    if (width % 2 != matrix.width%2) {
+      width++;
+    }
+    var height = matrix.height~/4;
+    if (height % 2 != matrix.height%2) {
+      height++;
+    }
   }
 
   @override
@@ -39,19 +50,18 @@ class QrPainter extends CustomPainter {
     Path fullDarkPath = Path();
     Path fullLightPath = Path();
 
-    final framePath = options.shapes.frame.createPath(pixelSize * 7, null);
-    final framePaint = options.colors.frame.createPaint(
-        pixelSize * 3, pixelSize * 3);
-    final ballPath = options.shapes.ball.createPath(pixelSize * 3, null);
-    final ballPaint = options.colors.ball.createPaint(
-        pixelSize * 3, pixelSize * 3);
+    var frameSize=  pixelSize * 7;
+    var ballSize = pixelSize * 3;
 
-    if (!options.shapes.darkPixel.dependOnNeighbors) {
-      darkPath = options.shapes.darkPixel.createPath(pixelSize, null);
-    }
-    if (!options.shapes.lightPixel.dependOnNeighbors) {
-      lightPath = options.shapes.lightPixel.createPath(pixelSize, null);
-    }
+    final framePathZeroOffset = options.shapes.frame
+        .createPath(Offset.zero, frameSize, Neighbors.empty);
+    final framePaint = options.colors.frame
+        .createPaint(pixelSize * 3, pixelSize * 3);
+
+    final ballPathZeroOffset = options.shapes.ball
+        .createPath(Offset.zero, pixelSize * 3, Neighbors.empty);
+    final ballPaint = options.colors.ball
+        .createPaint(pixelSize * 3, pixelSize * 3);
 
     canvas.drawRect(
         Rect.fromLTWH(0, 0, size.width, size.height),
@@ -61,57 +71,40 @@ class QrPainter extends CustomPainter {
     canvas.save();
     canvas.translate(padding, padding);
 
-    // todo: workaround for Dart bug with adding combined path.
-    fullDarkPath = Path.combine(PathOperation.union, fullDarkPath, Path());
-
-    if (options.colors.frame is! QrColorUnspecified) {
-      canvas.drawPath(framePath, framePaint);
-    } else {
-      fullDarkPath.addPath(framePath, Offset.zero);
+    void drawFrame(double dx, double dy) {
+      if (options.colors.frame is! QrColorUnspecified) {
+        canvas.save();
+        canvas.translate(dx, dy);
+        canvas.drawPath(framePathZeroOffset, framePaint);
+        canvas.restore();
+      } else {
+        var path = options.shapes.frame
+            .createPath(Offset(dx, dy), frameSize, Neighbors.empty);
+        canvas.drawPath(path, darkPaint);
+      }
     }
 
-    if (options.colors.ball is! QrColorUnspecified) {
-      canvas.save();
-      canvas.translate(pixelSize * 2, pixelSize * 2);
-      canvas.drawPath(ballPath, ballPaint);
-      canvas.restore();
-    } else {
-      fullDarkPath.addPath(ballPath, Offset(pixelSize * 2, pixelSize * 2));
+    void drawBall(double dx, double dy) {
+      if (options.colors.ball is! QrColorUnspecified) {
+        canvas.save();
+        canvas.translate(dx, dy);
+        canvas.drawPath(ballPathZeroOffset, ballPaint);
+        canvas.restore();
+      } else {
+        var path = options.shapes.ball
+            .createPath(Offset(dx, dy), ballSize, Neighbors.empty);
+        canvas.drawPath(path, darkPaint);
+      }
     }
 
-    canvas.save();
-    canvas.translate(pixelSize * (matrix.width - 7), 0);
-    if (options.colors.frame is! QrColorUnspecified) {
-      canvas.drawPath(framePath, framePaint);
-    } else {
-      fullDarkPath.addPath(
-          framePath, Offset(pixelSize * (matrix.width - 7), 0));
-    }
-    if (options.colors.ball is! QrColorUnspecified) {
-      canvas.translate(pixelSize * 2, pixelSize * 2);
-      canvas.drawPath(ballPath, ballPaint);
-    } else {
-      fullDarkPath.addPath(
-          ballPath, Offset(pixelSize * (matrix.width - 5), pixelSize * 2));
-    }
-    canvas.restore();
+    drawFrame(0,0);
+    drawBall(pixelSize * 2, pixelSize * 2);
 
-    canvas.save();
-    canvas.translate(0, pixelSize * (matrix.height - 7));
-    if (options.colors.frame is! QrColorUnspecified) {
-      canvas.drawPath(framePath, framePaint);
-    } else {
-      fullDarkPath.addPath(
-          framePath, Offset(0, pixelSize * (matrix.width - 7)));
-    }
-    if (options.colors.ball is! QrColorUnspecified) {
-      canvas.translate(pixelSize * 2, pixelSize * 2);
-      canvas.drawPath(ballPath, ballPaint);
-    } else {
-      fullDarkPath.addPath(
-          ballPath, Offset(pixelSize * 2, pixelSize * (matrix.height - 5)));
-    }
-    canvas.restore();
+    drawFrame(pixelSize * (matrix.width - 7), 0);
+    drawBall(pixelSize * (matrix.width - 5), pixelSize * 2);
+
+    drawFrame(0,pixelSize * (matrix.width - 7));
+    drawBall(pixelSize * 2, pixelSize * (matrix.height - 5));
 
 
     for (int i = 0; i < matrix.width; i++) {
@@ -123,28 +116,34 @@ class QrPainter extends CustomPainter {
           continue;
         }
 
-        if (options.shapes.darkPixel.dependOnNeighbors) {
+        if (options.colors.dark is! QrColorUnspecified) {
           darkPath = options.shapes.darkPixel.createPath(
-              pixelSize, matrix.neighbors(i, j)
+              Offset.zero, pixelSize, matrix.neighbors(i, j)
           );
         }
-        if (options.shapes.lightPixel.dependOnNeighbors) {
+        if (options.colors.light is! QrColorUnspecified) {
           lightPath = options.shapes.lightPixel.createPath(
-              pixelSize, matrix.neighbors(i, j)
+              Offset.zero, pixelSize, matrix.neighbors(i, j)
           );
         }
-        if (matrix.get(i, j) == 1) {
+        if (matrix.get(i, j) == 1 && options.colors.dark is! QrColorUnspecified) {
           fullDarkPath.addPath(darkPath!, Offset(i * pixelSize, j * pixelSize));
         }
-        if (matrix.get(i, j) != 0) {
-          fullLightPath.addPath(
-              lightPath!, Offset(i * pixelSize, j * pixelSize));
+        if (matrix.get(i, j) != 0 && options.colors.light is! QrColorUnspecified) {
+          fullLightPath.addPath(lightPath!, Offset(i * pixelSize, j * pixelSize));
         }
       }
     }
-    canvas.drawPath(fullDarkPath, darkPaint);
-    canvas.drawPath(fullLightPath, lightPaint);
+
+
+    if (options.colors.dark is! QrColorUnspecified) {
+      canvas.drawPath(fullDarkPath, darkPaint);
+    }
+    if (options.colors.light is! QrColorUnspecified) {
+      canvas.drawPath(fullLightPath, lightPaint);
+    }
     canvas.restore();
+
   }
 
   @override

@@ -5,9 +5,27 @@ import 'package:custom_qr_generator/util.dart';
 
 abstract class QrColor {
 
+  const QrColor();
+
   Paint createPaint(final double width, final double height);
 
-  const QrColor();
+  static const unspecified = QrColorUnspecified();
+
+  static QrColor solid(Color color) => QrColorSolid(color);
+
+  static QrColorLinearGradient linearGradient({
+    required List<Color> colors,
+    required GradientOrientation orientation
+  }) => QrColorLinearGradient(colors: colors, orientation: orientation);
+
+  static QrColorRadialGradient radialGradient({
+    required List<Color> colors,
+    double radiusFraction = 1
+  }) => QrColorRadialGradient(colors: colors, radiusFraction: radiusFraction);
+
+  static QrColorSweepGradient sweepGradient({
+    required List<Color> colors
+  }) => QrColorSweepGradient(colors: colors);
 }
 
 class QrColorUnspecified extends QrColor {
@@ -16,7 +34,8 @@ class QrColorUnspecified extends QrColor {
 
   @override
   Paint createPaint(double width, double height) =>
-      const QrColorSolid(Color.fromARGB(0,0,0,0)).createPaint(width, height);
+      const QrColorSolid(Color.fromARGB(0,0,0,0))
+          .createPaint(width, height);
 
   @override
   bool operator ==(Object other) =>

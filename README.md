@@ -1,6 +1,8 @@
 # Custom QR generator for Flutter
 [![pub package](https://img.shields.io/pub/v/custom_qr_generator.svg)](https://pub.dartlang.org/packages/custom_qr_generator)
 
+<img src="https://raw.githubusercontent.com/alexzhirkevich/custom-qr-generator-flutter/master/img/screen1.png" width=200>
+
 Flutter port of [Android library](https://github.com/alexzhirkevich/custom-qr-generator)
 
 # Progress
@@ -22,10 +24,10 @@ This will add a line like this to your package's `pubspec.yaml` (and run an impl
 
 ```yaml
 dependencies:
-  custom_qr_generator: ^0.1.0
+  custom_qr_generator: ^0.1.2
 ```
 
-## Import it 
+## Import it
 
 Now in your Dart code, you can use:
 
@@ -73,11 +75,50 @@ class MyApp extends StatelessWidget {
                         )
                     )
                 )),
-            size: const Size(300, 300),
+            size: const Size(350, 350),
           ),
         ),
       ),
     );
   }
 }
+
+```
+
+# Customization
+
+You can implement custom shapes for any QR code parts: QrPixelShape, QrBallShape, QrFrameShape
+like this:
+```dart
+class QrPixelShapeCircle extends QrPixelShape {
+  
+  @override
+  Path createPath(double size, Neighbors neighbors) =>
+      Path()..addOval(Rect.fromLTRB(0, 0, size, size));
+}
+```
+
+Also you can create custom paint for this elements:
+
+```dart
+
+class QrColorRadialGradient extends QrColor {
+
+  final List<Color> colors;
+
+  const QrColorRadialGradient({
+    required this.colors,
+  });
+
+  @override
+  Paint createPaint(final double width, final double height) =>
+      Paint()
+        ..shader = Gradient.radial(
+            Offset(width / 2, height / 2),
+            min(width, height),
+            colors
+        );
+}
+
+
 ```

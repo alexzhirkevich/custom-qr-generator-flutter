@@ -4,55 +4,50 @@ import 'package:custom_qr_generator/util.dart';
 
 import '../../neighbors.dart';
 
-abstract class Shape {
+abstract class QrElementShape {
 
-  abstract final bool dependOnNeighbors;
+  Path createPath(Offset offset, double size, Neighbors neighbors);
 
-  Path createPath(double size, Neighbors? neighbors);
-
-  const Shape();
+  const QrElementShape();
 }
 
-mixin ShapeRect implements Shape {
+mixin ShapeRect implements QrElementShape {
 
   @override
-  bool get dependOnNeighbors => false;
-
-  @override
-  Path createPath(double size, Neighbors? neighbors) => Path()
-    ..addRect(Rect.fromLTRB(0, 0, size, size));
+  Path createPath(Offset offset, double size, Neighbors neighbors) => Path()
+    ..addRect(Rect.fromLTWH(offset.dx, offset.dy, size, size));
 }
 
 
-mixin ShapeCircle implements Shape {
+mixin ShapeCircle implements QrElementShape {
 
   abstract final double radiusFraction;
 
   @override
-  bool get dependOnNeighbors => false;
-
-  @override
-  Path createPath(double size, Neighbors? neighbors) {
-    Path path = Path();
+  Path createPath(Offset offset, double size, Neighbors neighbors) {
     double cSizeFraction = radiusFraction.coerceIn(0.0, 1.0);
     double padding = size * (1 - cSizeFraction)/2;
-    path.addOval(Rect.fromLTRB(padding, padding, size- padding, size-padding));
-    return path;
+    var sSize = size - 2*padding;
+    return Path()
+        ..addOval(Rect.fromLTWH(offset.dx + padding, offset.dy + padding,sSize, sSize));
   }
 }
 
-mixin ShapeRoundCorners implements Shape {
+mixin ShapeRoundCorners implements QrElementShape {
 
     abstract final double cornerFraction;
 
     @override
-    Path createPath(double size, Neighbors? neighbors) {
+    Path createPath(Offset offset, double size, Neighbors neighbors) {
       Path path = Path();
       double corner = cornerFraction.coerceIn(0, .5) * size;
 
-
-      if (!dependOnNeighbors || neighbors == null || !neighbors.hasAny()){
-        path.addRRect(RRect.fromLTRBR(0, 0, size, size, Radius.circular(corner)));
+      if (!neighbors.hasAny()){
+        path.addRRect(RRect.fromLTRBR(
+            offset.dx, offset.dy,
+            offset.dx + size, offset.dy + size,
+            Radius.circular(corner))
+        );
       } else {
 
         double topLeft =0;
@@ -73,7 +68,8 @@ mixin ShapeRoundCorners implements Shape {
           bottomRight = corner;
         }
 
-        path.addRRect(RRect.fromLTRBAndCorners(0, 0, size, size,
+        path.addRRect(RRect.fromLTRBAndCorners(
+          offset.dx, offset.dy, offset.dx + size, offset.dy + size,
             topLeft: Radius.circular(topLeft),
             topRight: Radius.circular(topRight),
             bottomLeft: Radius.circular(bottomLeft),

@@ -1,15 +1,36 @@
 import 'dart:ui';
 
 import 'package:custom_qr_generator/custom_qr_generator.dart';
-import 'package:custom_qr_generator/neighbors.dart';
-import 'package:custom_qr_generator/util.dart';
-import 'package:custom_qr_generator/shapes/shape.dart';
 
-abstract class QrFrameShape extends Shape{
-  @override
-  bool get dependOnNeighbors => false;
+abstract class QrFrameShape extends QrElementShape {
 
   const QrFrameShape();
+
+  static const basic = QrFrameShapeDefault();
+
+  static QrFrameShapeCircle circle({
+    double widthFraction = 1,
+    double radiusFraction = 1
+  }) => QrFrameShapeCircle(
+          widthFraction: widthFraction,
+          radiusFraction: radiusFraction
+      );
+
+  static QrFrameShapeRoundCorners roundCorners({
+    required double cornerFraction,
+    double widthFraction = 1,
+    bool topLeft = true,
+    bool topRight = true,
+    bool bottomLeft = true,
+    bool bottomRight = true
+  }) => QrFrameShapeRoundCorners(
+          widthFraction: widthFraction,
+          cornerFraction: cornerFraction,
+          topLeft: topLeft,
+          topRight: topRight,
+          bottomLeft: bottomLeft,
+          bottomRight: bottomRight
+      );
 }
 
 class QrFrameShapeDefault extends QrFrameShape {
@@ -17,14 +38,12 @@ class QrFrameShapeDefault extends QrFrameShape {
   const QrFrameShapeDefault();
 
   @override
-  Path createPath(double size, Neighbors? neighbors) {
-    final big = Path()
-      ..addRect(Rect.fromLTWH(0, 0, size, size));
-    final small = Path()
-      ..addRect(Rect.fromLTWH(size / 7, size / 7, size * 5 / 7, size * 5 / 7));
+  Path createPath(Offset offset, double size, Neighbors? neighbors) =>
+      Path()
+        ..fillType = PathFillType.evenOdd
+        ..addRect(Rect.fromLTWH(offset.dx, offset.dy, size, size))
+        ..addRect(Rect.fromLTWH(offset.dx +size / 7,offset.dy+ size / 7, size * 5 / 7, size * 5 / 7));
 
-    return Path.combine(PathOperation.xor, big, small);
-  }
 
   @override
   bool operator ==(Object other) => other is QrFrameShapeDefault;
@@ -44,20 +63,23 @@ class QrFrameShapeCircle extends QrFrameShape {
   });
 
   @override
-  Path createPath(double size, Neighbors? neighbors) {
+  Path createPath(Offset offset, double size, Neighbors? neighbors) {
+
     final realSize = size * radiusFraction;
-    final offset = (size - realSize) / 2;
+    final offset2 = (size - realSize) / 2;
     final width = size / 7 * widthFraction.coerceAtLeast(0);
-    final big = Path()
-      ..addOval(Rect.fromLTWH(offset, offset, realSize, realSize));
 
-    final small = Path()
+
+    return Path()
+      ..fillType = PathFillType.evenOdd
+      ..addOval(Rect.fromLTWH(offset.dx + offset2, offset.dy + offset2, realSize, realSize))
       ..addOval(Rect.fromLTWH(
-          offset + width, offset + width,
-          size - offset * 2 - width * 2, size - offset * 2 - width * 2
-      ));
-
-    return Path.combine(PathOperation.xor, small, big);
+          offset.dx + offset2 + width,
+          offset.dy + offset2 + width,
+          size - offset2 * 2 - width * 2,
+          size - offset2 * 2 - width * 2
+      ))
+    ;
   }
 
   @override
@@ -89,7 +111,7 @@ class QrFrameShapeRoundCorners extends QrFrameShape {
   });
 
   @override
-  Path createPath(double size, Neighbors? neighbors) {
+  Path createPath(Offset offset,double size, Neighbors? neighbors) {
     final cf = cornerFraction.coerceIn(0, .5);
     final cTopLeft = topLeft ? cf : 0;
     final cTopRight = topRight ? cf : 0;
@@ -97,23 +119,24 @@ class QrFrameShapeRoundCorners extends QrFrameShape {
     final cBottomRight = bottomRight ? cf : 0;
     final w = size / 7 * widthFraction.coerceIn(0, 2);
 
-    final big = Path()
-      ..addRRect(RRect.fromLTRBAndCorners(0, 0, size, size,
+    return Path()
+      ..fillType=PathFillType.evenOdd
+      ..addRRect(RRect.fromLTRBAndCorners(
+        offset.dx, offset.dy,
+        offset.dx + size, offset.dy + size,
         topLeft: Radius.circular(size * cTopLeft),
         topRight: Radius.circular(size * cTopRight),
         bottomLeft: Radius.circular(size * cBottomLeft),
         bottomRight: Radius.circular(size * cBottomRight),
-      ));
-
-    final small = Path()
-      ..addRRect(RRect.fromLTRBAndCorners(w, w, size - w, size - w,
+      ))
+      ..addRRect(RRect.fromLTRBAndCorners(
+        offset.dx + w, offset.dy + w,
+        offset.dx + size - w,  offset.dy + size - w,
         topLeft: Radius.circular((size - 2 * w) * cTopLeft),
         topRight: Radius.circular((size - 2 * w) * cTopRight),
         bottomLeft: Radius.circular((size - 2 * w) * cBottomLeft),
         bottomRight: Radius.circular((size - 2 * w) * cBottomRight),
       ));
-
-    return Path.combine(PathOperation.xor, big, small);
   }
 
   @override

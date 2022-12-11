@@ -9,6 +9,8 @@ class Neighbors {
   final bool bottom;
   final bool bottomRight;
 
+  static const empty = Neighbors();
+
   const Neighbors({
     this.topLeft = false,
     this.topRight = false,

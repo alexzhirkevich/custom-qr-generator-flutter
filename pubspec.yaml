@@ -1,6 +1,6 @@
 name: custom_qr_generator
 description: Custom QR generator for Flutter
-version: 0.1.0
+version: 0.1.2
 homepage: https://github.com/alexzhirkevich/custom-qr-generator-flutter
 
 environment:
@@ -8,9 +8,9 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
+  zxing_lib: ^0.6.0
   flutter:
     sdk: flutter
-  zxing_lib: ^0.6.0
 
 dev_dependencies:
   flutter_test:
