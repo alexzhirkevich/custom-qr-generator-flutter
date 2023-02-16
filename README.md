@@ -9,7 +9,7 @@ Flutter port of [Android library](https://github.com/alexzhirkevich/custom-qr-ge
 - ✅ Vector codes
 - ✅ Base and custom shapes
 - ✅ Base and custom colors
-- 🚧 Logo
+- 🚧 Logo (Can be added just by placing your image on top of qr code image and inscreasing `errorCorrectionLevel`)
 
 # Installing
 
