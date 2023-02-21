@@ -7,4 +7,4 @@ on:
 
 jobs:
   publish:
-    uses: dart-lang/setup-dart@v1.4/.github/workflows/publish.yml
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@1.4
